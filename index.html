@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI简历优化工具</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .card { transition: all 0.3s ease; }
+        .card:hover { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .loading-spinner { border: 3px solid #f3f3f3; border-top: 3px solid #667eea; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .tab-active { border-bottom: 2px solid #667eea; color: #667eea; font-weight: 600; }
+        .progress-bar { height: 8px; border-radius: 4px; background: #e5e7eb; overflow: hidden; }
+        .progress-fill { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
+        .score-low { background: #ef4444; }
+        .score-medium { background: #f59e0b; }
+        .score-high { background: #10b981; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div id="app">
+        <!-- 导航栏 -->
+        <nav class="gradient-bg text-white shadow-lg">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between h-16">
+                    <div class="flex items-center">
+                        <span class="text-2xl font-bold">AI简历优化</span>
+                    </div>
+                    <div class="flex space-x-4">
+                        <button class="px-3 py-2 rounded-md text-sm font-medium hover:bg-white hover:bg-opacity-20" @click="currentView = 'dashboard'">首页</button>
+                        <button class="px-3 py-2 rounded-md text-sm font-medium hover:bg-white hover:bg-opacity-20" @click="currentView = 'analyze'">分析简历</button>
+                        <button class="px-3 py-2 rounded-md text-sm font-medium hover:bg-white hover:bg-opacity-20" @click="currentView = 'interview'">面试模拟</button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- 主内容区域 -->
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- 首页视图 -->
+            <div v-if="currentView === 'dashboard'" class="space-y-6">
+                <div class="text-center py-12">
+                    <h1 class="text-4xl font-bold text-gray-900 mb-4">智能简历优化平台</h1>
+                    <p class="text-xl text-gray-600 mb-8">AI驱动，精准匹配，让你的简历脱颖而出</p>
+                    <button class="gradient-bg text-white px-8 py-3 rounded-lg text-lg font-semibold hover:opacity-90 transition" @click="currentView = 'analyze'">
+                        开始分析简历
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-white rounded-lg shadow p-6 card">
+                        <div class="text-3xl mb-2">🎯</div>
+                        <h3 class="text-lg font-semibold mb-2">JD匹配分析</h3>
+                        <p class="text-gray-600">智能解析职位描述，精准匹配你的技能和经验</p>
+                    </div>
+                    <div class="bg-white rounded-lg shadow p-6 card">
+                        <div class="text-3xl mb-2">📄</div>
+                        <h3 class="text-lg font-semibold mb-2">智能排版优化</h3>
+                        <p class="text-gray-600">ATS友好模板，自动调整布局，提升通过率</p>
+                    </div>
+                    <div class="bg-white rounded-lg shadow p-6 card">
+                        <div class="text-3xl mb-2">🤖</div>
+                        <h3 class="text-lg font-semibold mb-2">面试模拟</h3>
+                        <p class="text-gray-600">AI面试官，针对性提问，提升面试表现</p>
+                    </div>
+                </div>
+
+                <!-- 最近分析记录 -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h2 class="text-xl font-semibold mb-4">最近分析记录</h2>
+                    <div v-if="history.length === 0" class="text-gray-500 text-center py-8">
+                        暂无分析记录，开始你的第一次分析吧
+                    </div>
+                    <div v-else class="space-y-4">
+                        <div v-for="item in history" :key="item.id" class="border-b pb-3 last:border-0">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <p class="font-medium">{{ item.jdTitle }}</p>
+                                    <p class="text-sm text-gray-500">{{ item.date }}</p>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-sm font-semibold" :class="{'text-green-600': item.score >= 80, 'text-yellow-600': item.score >= 60 && item.score < 80, 'text-red-600': item.score < 60}">
+                                        {{ item.score }}分
+                                    </span>
+                                    <button class="text-indigo-600 hover:text-indigo-800 text-sm" @click="viewDetail(item)">查看详情</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 分析简历视图 -->
+            <div v-if="currentView === 'analyze'" class="space-y-6">
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h2 class="text-2xl font-semibold mb-6">简历分析</h2>
+                    
+                    <!-- 输入区域 -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">职位描述 (JD)</label>
+                            <textarea v-model="jdText" rows="8" class="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="粘贴职位描述..."></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">简历内容</label>
+                            <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-indigo-500" @click="triggerUpload">
+                                <input type="file" ref="fileInput" class="hidden" accept=".pdf,.doc,.docx,.txt" @change="handleFileUpload">
+                                <div v-if="!resumeText" class="text-gray-500">
+                                    <span class="text-4xl">📁</span>
+                                    <p class="mt-2">点击上传简历 (PDF/Word/Text)</p>
+                                </div>
+                                <div v-else class="text-gray-700">
+                                    <span class="text-4xl">✅</span>
+                                    <p class="mt-2">简历已上传</p>
+                                </div>
+                            </div>
+                            <div v-if="resumeText" class="mt-4">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">或直接粘贴简历文本</label>
+                                <textarea v-model="resumeText" rows="6" class="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="粘贴简历内容..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 flex justify-end">
+                        <button class="gradient-bg text-white px-6 py-2 rounded-lg font-semibold hover:opacity-90 transition disabled:opacity-50" :disabled="!jdText || !resumeText || loading" @click="analyzeResume">
+                            <span v-if="loading" class="flex items-center">
+                                <span class="loading-spinner mr-2"></span>
+                                分析中...
+                            </span>
+                            <span v-else>开始分析</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 分析结果 -->
+                <div v-if="analysisResult" class="space-y-6">
+                    <!-- 匹配度评分 -->
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <h3 class="text-lg font-semibold mb-4">匹配度评分</h3>
+                        <div class="flex items-center space-x-4">
+                            <div class="text-4xl font-bold" :class="{'text-green-600': analysisResult.score >= 80, 'text-yellow-600': analysisResult.score >= 60 && analysisResult.score < 80, 'text-red-600': analysisResult.score < 60}">
+                                {{ analysisResult.score }}分
+                            </div>
+                            <div class="flex-1">
+                                <div class="progress-bar">
+                                    <div class="progress-fill" :class="{'score-low': analysisResult.score < 60, 'score-medium': analysisResult.score >= 60 && analysisResult.score < 80, 'score-high': analysisResult.score >= 80}" :style="{width: analysisResult.score + '%'}"></div>
+                                </div>
+                                <p class="text-sm text-gray-500 mt-1">{{ analysisResult.summary }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 关键技能匹配 -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <h3 class="text-lg font-semibold mb-4">JD关键技能</h3>
+                            <div class="space-y-2">
+                                <div v-for="skill in analysisResult.jdSkills" :key="skill.name" class="flex items-center justify-between">
+                                    <span>{{ skill.name }}</span>
+                                    <span :class="{'text-green-600': skill.matched, 'text-red-600': !skill.matched}">
+                                        {{ skill.matched ? '✓ 已匹配' : '✗ 缺失' }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <h3 class="text-lg font-semibold mb-4">你的技能</h3>
+                            <div class="flex flex-wrap gap-2">
+                                <span v-for="skill in analysisResult.resumeSkills" :key="skill" class="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm">
+                                    {{ skill }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 排版建议 -->
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <h3 class="text-lg font-semibold mb-4">排版建议</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div v-for="template in analysisResult.templates" :key="template.name" class="border rounded-lg p-4 cursor-pointer hover:border-indigo-500" :class="{'border-indigo-500 bg-indigo-50': template.selected}" @click="selectTemplate(template)">
+                                <h4 class="font-medium">{{ template.name }}</h4>
+                                <p class="text-sm text-gray-500 mt-1">{{ template.description }}</p>
+                                <p class="text-sm text-indigo-600 mt-2">{{ template.atsScore }}% ATS通过率</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 改进建议 -->
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <h3 class="text-lg font-semibold mb-4">改进建议</h3>
+                        <div class="space-y-3">
+                            <div v-for="suggestion in analysisResult.suggestions" :key="suggestion.id" class="flex items-start space-x-3 p-3 bg-yellow-50 rounded-lg">
+                                <span class="text-yellow-600 mt-1">💡</span>
+                                <div>
+                                    <p class="font-medium">{{ suggestion.title }}</p>
+                                    <p class="text-sm text-gray-600">{{ suggestion.detail }}</p>
+                                    <button v-if="suggestion.templateLink" class="text-indigo-600 text-sm mt-1 hover:underline" @click="openTemplate(suggestion.templateLink)">
+                                        查看模板 →
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 面试模拟视图 -->
+            <div v-if="currentView === 'interview'" class="space-y-6">
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h2 class="text-2xl font-semibold mb-6">AI面试模拟</h2>
+                    
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">选择职位类型</label>
+                        <select v-model="interviewPosition" class="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="">请选择...</option>
+                            <option value="frontend">前端工程师</option>
+                            <option value="backend">后端工程师</option>
+                            <option value="fullstack">全栈工程师</option>
+                            <option value="data">数据科学家</option>
+                            <option value="product">产品经理</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">面试难度</label>
+                        <div class="flex space-x-4">
+                            <label v-for="level in interviewLevels" :key="level.value" class="flex items-center">
+                                <input type="radio" v-model="interviewDifficulty" :value="level.value" class="mr-2">
+                                <span>{{ level.label }}</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <button class="gradient-bg text-white px-6 py-2 rounded-lg font-semibold hover:opacity-90 transition disabled:opacity-50" :disabled="!interviewPosition || interviewLoading" @click="startInterview">
+                        <span v-if="interviewLoading" class="flex items-center">
+                            <span class="loading-spinner mr-2"></span>
+                            准备中...
+                        </span>
+                        <span v-else>开始面试</span>
+                    </button>
+
+                    <!-- 面试对话 -->
+                    <div v-if="interviewMessages.length > 0" class="mt-6 space-y-4">
+                        <div v-for="(msg, index) in interviewMessages" :key="index" class="flex" :class="{'justify-end': msg.role === 'user', 'justify-start': msg.role === 'ai'}">
+                            <div class="max-w-3/4 p-4 rounded-lg" :class="{'bg-indigo-100': msg.role === 'user', 'bg-gray-100': msg.role === 'ai'}">
+                                <p class="text-sm font-medium mb-1" :class="{'text-indigo-700': msg.role === 'user', 'text-gray-700': msg.role === 'ai'}">
+                                    {{ msg.role === 'user' ? '你' : 'AI面试官' }}
+                                </p>
+                                <p>{{ msg.content }}</p>
+                            </div>
+                        </div>
+                        
+                        <div v-if="!interviewEnded" class="flex space-x-2">
+                            <input v-model="interviewAnswer" type="text" class="flex-1 border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="输入你的回答..." @keyup.enter="sendInterviewAnswer">
+                            <button class="gradient-bg text-white px-4 py-2 rounded-lg hover:opacity-90 transition" @click="sendInterviewAnswer">发送</button>
+                        </div>
+                        <div v-else class="text-center text-gray-500">
+                            <p>面试结束！AI将评估你的表现。</p>
+                            <button class="mt-2 text-indigo-600 hover:underline" @click="resetInterview">重新开始</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.7.14/dist/vue.js"></script>
+    <script>
+        new Vue({
+            el: '#app',
+            data: {
+                currentView: 'dashboard',
+                // 分析数据
+                jdText: '',
+                resumeText: '',
+                loading: false,
+                analysisResult: null,
+                history: [
+                    { id: 1, jdTitle: '高级前端工程师', date: '2024-01-15', score: 85 },
+                    { id: 2, jdTitle: '后端开发工程师', date: '2024-01-10', score: 72 },
+                ],
+                // 面试数据
+                interviewPosition: '',
+                interviewDifficulty: 'medium',
+                interviewLevels: [
+                    {
